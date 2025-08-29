@@ -4,7 +4,11 @@ import com.example.test.core.entities.Booking;
 import com.example.test.core.entities.Seat;
 import com.example.test.core.enums.BookingStatusEnum;
 import com.example.test.core.enums.SeatStatus;
+import com.example.test.exceptions.BookingNotFoundException;
+import com.example.test.exceptions.PaymentFailedException;
+import com.example.test.service.strategy.PaymentStrategy;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
@@ -18,6 +22,8 @@ public class BookingService {
     private Map<Integer, Booking> bookings = new HashMap<>();
     private int bookingCounter = 1;
 
+    @Autowired
+    PaymentService paymentService;
 
     public BookingService(Map<Integer, Seat> seats) {
         this.seats = seats;
@@ -55,18 +61,18 @@ public class BookingService {
         return booking;
     }
 
-    public boolean confirmBooking(int bookingId, double amount, PaymentService paymentService) {
+    public Booking confirmBooking(int bookingId, double amount, PaymentStrategy paymentStrategy) {
         Booking booking = bookings.get(bookingId);
-        if (booking == null || !BookingStatusEnum.IN_PROGRESS.equals(booking.getStatus())) {
-            return false;
+        if (booking == null) throw new BookingNotFoundException("Booking not found");
+
+        if (!paymentStrategy.pay(bookingId, amount)) {
+            throw new PaymentFailedException("Payment failed for booking " + bookingId);
         }
-        boolean paid = paymentService.makePayment(bookingId, amount);
-        if (paid) {
-            booking.setStatus(BookingStatusEnum.SUCCESS);
-            confirmSeats(booking.getSeatIds());
-            return true;
-        }
-        return false;
+
+        booking.setStatus(BookingStatusEnum.SUCCESS);
+        confirmSeats(booking.getSeatIds());
+        return booking;
+
     }
 
     public Booking getBooking(int bookingId) {
