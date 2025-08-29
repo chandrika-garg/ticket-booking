@@ -4,7 +4,9 @@ import com.example.test.core.entities.Booking;
 import com.example.test.core.entities.Event;
 import com.example.test.core.entities.Seat;
 import com.example.test.service.BookingService;
+import com.example.test.service.PaymentFactory;
 import com.example.test.service.PaymentService;
+import com.example.test.service.strategy.PaymentStrategy;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -31,8 +33,9 @@ public class BookingApplicationMain {
         }
 
         // Step 2: Confirm booking with payment
-        boolean confirmed = bookingService.confirmBooking(booking.getId(), 900.0, paymentService);
-        System.out.println("Booking confirmation status: " + confirmed);
+        PaymentStrategy strategy = PaymentFactory.getPaymentStrategy("CASH");
+        Booking confirmedBooking = bookingService.confirmBooking(booking.getId(), 900.0, strategy);
+        System.out.println("Booking confirmation status: " + confirmedBooking);
 
         // Step 3: Show final seat statuses
         for (Seat seat : seats.values()) {
